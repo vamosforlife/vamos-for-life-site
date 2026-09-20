@@ -10,13 +10,6 @@
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 
-// Stripe exige le corps brut de la requete pour verifier la signature.
-module.exports.config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -26,7 +19,7 @@ function readRawBody(req) {
   });
 }
 
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Methode non autorisee' });
     return;
@@ -123,4 +116,16 @@ module.exports = async function handler(req, res) {
     // 500 => Stripe reessaiera automatiquement l'envoi de l'evenement.
     res.status(500).json({ error: 'Erreur enregistrement commande' });
   }
+}
+
+// Stripe exige le corps brut de la requete pour verifier la signature.
+// Cette propriete doit rester attachee a la fonction exportee elle-meme
+// (et non a module.exports avant la reassignation), sinon Vercel ne la
+// voit jamais et parse le corps en JSON avant qu'on puisse le lire brut.
+handler.config = {
+  api: {
+    bodyParser: false,
+  },
 };
+
+module.exports = handler;
