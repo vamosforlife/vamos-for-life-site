@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-    const { amount } = req.body || {};
+    const { amount, orderNum, userId } = req.body || {};
 
     const amountNumber = Number(amount);
     if (!amountNumber || isNaN(amountNumber) || amountNumber <= 0) {
@@ -25,10 +25,17 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // Metadonnees : permettent au webhook de retrouver la commande
+    // meme si le navigateur du client se ferme avant l'enregistrement.
+    const metadata = {};
+    if (orderNum) metadata.order_num = String(orderNum).slice(0, 100);
+    if (userId) metadata.user_id = String(userId).slice(0, 100);
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amountNumber * 100), // euros -> centimes
       currency: 'eur',
       automatic_payment_methods: { enabled: true },
+      metadata,
     });
 
     res.status(200).json({ clientSecret: paymentIntent.client_secret });
